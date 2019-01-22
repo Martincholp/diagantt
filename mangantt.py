@@ -1,50 +1,15 @@
 #! /usr/bin/env python
 #-*- coding: UTF-8 -*-
 
-'''Programa para la creacion y manejo de diagramas de Gantt'''
+'''Estructura de clases del sistema de gestion de diagramas de Gantt'''
 
-
-
-##  EXCEPCIONES  ##
-class Error_de_tipo(Exception):
-    """Se lanza al utilizar un tipo no válido"""
-    def __init__(self, val):
-        self.val = val
-        
-    def __str__(self):
-        return "El tipo " + self.val + " no es válido"
-
-class Error_de_progreso(Exception):
-    """Ocurre al no poder computar u obtener el progreso de un elemento"""
-    def __init__(self, elem):
-        self.elem = elem
-
-    def __str__(self):
-        return "No se puede obtener el progreso del elemento " + elem.nombre
-        
-class Progreso_no_valido(Exception):
-    """Error al ingresar un valor de progreso que no es correcto para la acción que se intenta realizar"""
-    def __init__(self, valor):
-        self.valor = valor
-        self.mensaje = "El valor " + str(self.valor) + " no es correcto"
-
-    def __str__(self):
-        return self.mensaje
-
-
-class Error_de_agregado(Exception):
-    """Error al intentar agregar un elemento que no es apto para tal accion"""
-    def __init__(self, valor):
-        self.valor = valor
-        self.mensaje = "El elemento " + str(self.nombre) + " no se puede agregar."
-
-    def __str__(self):
-        return self.mensaje
-
+# def init(Nombre):
+#     '''Inicializa un proyecto'''
+#     return Elemento(Nombre, 'proyecto')
 
 class Elemento(object):
     """Elementos basicos de un diagrama de Gantt"""
-    __id_actual = 0
+    __id_actual = 1  #  Comienzo por 1. El id 0 va a ser siempre asignado al proyecto
     __elems = {}
 
     @staticmethod
@@ -55,12 +20,21 @@ class Elemento(object):
 
         return res
 
+    @staticmethod
+    def get_elem(id):
+        '''Devuelve el elemento indicado según su id'''
+        return Elemento.__elems[id]
+
+    @staticmethod
+    def get_proyecto():
+        '''Devuelve el proyecto. Es equivalente a hacer get_elem(0)'''
+        return Elemento.__elems[0]
 
     def __init__(self, nombre, tipo):
         
         self.__nombre = nombre
         self.__id = Elemento.get_id()  # Identificador del elemento
-        self.__tipo_elem = tipo  # Tipo de elemento ('hito', 'tarea', 'grupo')
+        self.__tipo_elem = tipo  # Tipo de elemento ('hito', 'tarea', 'grupo', 'proyecto')
         self.__padre = None
 
         # Agrego el objeto creado al diccionario de elementos, con el id como clave
@@ -77,8 +51,8 @@ class Elemento(object):
         self.__nombre = val
     
     @property
-        '''Identificador unico del elemento. Solo lectura.'''
     def id(self):
+        '''Identificador unico del elemento. Solo lectura.'''
         return self.__id
 
     @property
@@ -88,7 +62,7 @@ class Elemento(object):
     
     @property
     def padre(self):
-        """Padre del elemento. Si el elemento no tiene padre, entonces vale None"""
+        """Padre del elemento. Si el elemento no tiene padre, entonces vale None. Solo lectura."""
         return self.__padre
     
         
@@ -98,24 +72,14 @@ class Hito(Elemento):
     se crea un hito de tiempo por defecto."""
     
 
-    def __init__(self, nombre, valor, tipo='tiempo', padre=None):  #  Los valores para el tipo pueden ser 'tiempo' o 'progreso'
+    def __init__(self, nombre, valor, subtipo, id_padre=0):  #  Los valores para el tipo pueden ser 'tiempo' o 'progreso'
         super(Hito, self).__init__(nombre, 'hito')
         
         self.__ocurrido = False
         self.__valor = valor
-        self.__tipo = tipo
+        self.__subtipo = subtipo
         self._Hito__padre = padre
-
-        if tipo=='tiempo':
-            self.__momento = valor
-        elif tipo=='progreso':
-            if not hasattr(padre, progreso):
-                raise Error_de_progreso(padre)
-
-            self.__momento = None
-        else:
-            raise Error_de_tipo(tipo)
-
+        self.__momento = None
 
     @property
     def ocurrido(self):
@@ -132,19 +96,24 @@ class Hito(Elemento):
 
     
     @property
-    def tipo(self):
-        """Tipo de hito. Los valores que puede adquirir esta propiedad son 'tiempo' y 'progreso', siendo el hito
-        de tiempo el valor por defecto. Si es un hito de tiempo su estado de ocurrencia pasara a True cuando el
-        tiempo global del proyecto sea mayor que el establecido como valor del hito. En caso de que sea de progreso
-        se debe establecer una tarea o grupo y su estado de ocurrencia será True cuando el progreso de dicha tarea
-        o grupo sea mayor al establecido como valor del hito. Solo lectura."""
-        return self.__tipo
+    def subtipo(self):
+        """Establece un tipo de hito. En las clases derivadas Hito_tmpo e Hito_prog ésta propiedad adquiere los valores
+        'tiempo' y 'progreso' respectivamente. Se puede establecer un nuevo tipo de hito si se extiende la clase Hito y
+        se asigna el tipo en ésta propiedad"""
+
+        # """Tipo de hito. Los valores que puede adquirir esta propiedad son 'tiempo' y 'progreso', siendo el hito
+        # de tiempo el valor por defecto. Si es un hito de tiempo su estado de ocurrencia pasara a True cuando el
+        # tiempo global del proyecto sea mayor que el establecido como valor del hito. En caso de que sea de progreso
+        # se debe establecer una tarea o grupo y su estado de ocurrencia será True cuando el progreso de dicha tarea
+        # o grupo sea mayor al establecido como valor del hito. Solo lectura."""
+        return self.__subtipo
     
 
     @property
     def valor(self):
-        '''Valor que definira cuando se produce un hito. Si es de tiempo, valor se compara con el tiempo global del 
-        proyecto, y si es de progreso se compara con el progreso del elemento pasado como padre.'''
+        '''Valor que definira cuando se produce un hito. Lo que representa éste valor depende del tipo de hito que sea.
+        Si es de tiempo, valor será el momento de ocurrencia del hito, y si es de progreso será el porcentaje de progreso
+        del padre que se debe comparar para establecer el momento de ocurrencia.'''
         return self.__valor
     
     @valor.setter
@@ -152,43 +121,108 @@ class Hito(Elemento):
         self.__valor = val
     
 
-    @property
-    def padre(self):
-        """Elemento del cual se obtiene el progreso cuando el tipo de hito es 'progreso'. Solo lectura."""
-        return self.__padre
-    
+    def actualizar(self):
+        '''Analiza el estado del hito para saber si se ha producido o no. Este método debe extenderse cuando se deriven 
+        clases a partir de la clase Hito.'''
+        pass
+
+
+class Hito_tmpo(Hito):
+    """Hito de tiempo. Define un momento específico del proyecto. El padre puede ser un grupo o tarea o no tener un padre
+    explícito, sin embargo el momento siempre está definido respecto del proyecto. Si no tiene asignado un padre
+    explícitamente se asume como padre el proyecto mismo."""
+
+    def __init__(self, nombre, valor, id_padre=0):
+        super(Hito_tmpo, self).__init__(nombre, valor, 'tiempo', id_padre)
+        self._Hito__momento = valor
+        
+    def actualizar(self):
+        '''Analiza el estado del hito para saber si se ha producido o no. Cuando el tiempo del proyecto sea mayor que el
+        valor establecido en el hito, entonces habrá ocurrido'''
+
+        if Elemento.get_proyecto().tmpo_actual >= self.valor:
+            self.__ocurrido = True
+        else:
+            self.__ocurrido = False
+
+    # @property
+    # def momento(self):
+    #     """Momento en que ocurre el hito, se haya producido o no. Solo lectura"""
+    #     return self.__momento
+
+
+
+class Hito_prog(Hito):
+    """Hito de progreso. Define el momento en el que el padre alcanzó el progreso especificado en la propiedad valor. El
+    padre puede ser un grupo, una tarea o no estar definido explícitamente. En el caso de que no sea explícito se asume 
+    como padre el proyecto mismo. Si el hito aún no ocurrió el valor del momento será None, y en caso de que haya ocurrido
+    tendrá el valor de tiempo correspondiente. Éste valor de tiempo siempre será relativo al proyecto, no importa quién sea
+    el padre del hito."""
+
+    def __init__(self, nombre, valor, id_padre=0):
+        super(Hito_tmpo, self).__init__(nombre, valor, 'progreso', id_padre)
+        self._Hito__momento = None
+
+        # Si el padre no tiene la propiedad progreso, entonces devuelvo un error
+        if not hasattr(padre, progreso):
+            raise Error_de_progreso(padre)
+
+    def actualizar(self):
+        '''Analiza el estado del hito para saber si se ha producido o no. Cuando el progreso del padre sea mayor que el
+        valor establecido en el hito, entonces habrá ocurrido'''
+
+        if Elemento.get_elem(self.id_padre).progreso >= self.valor:
+            self.__ocurrido = True
+            self._Hito__momento = Elemento.get_proyecto().tmpo_actual
+        else:
+            self.__ocurrido = False
+            self._Hito__momento = None
+
+
+
+    # @property
+    # def momento(self):
+    #     """Momento en que ocurre el hito. Si el hito ya ha ocurrido adquiere como valor el tiempo global en el que se 
+    #     produce. Si aún no ha ocurrido, su valor es None hasta que el hito ocurra. Solo lectura"""
+    #     return self.__momento
+
     
 
-class Tarea(Elemento):
-    """Tarea a realizar en un proyecto"""
-    def __init__(self, nombre, inicio, fin, precedentes=[]):
-        super(Tarea, self).__init__(nombre, 'tarea')
-        self.__inicio = Hito('inicia:'+nombre, inicio) 
-        self.__fin = Hito('fin:'+nombre, fin)  
-        self.__precedentes = precedentes
-        self.__estado = 'espera'  #  Los estados posibles son: 'esperando', 'demorado', 'ejecutando', 'pausado', 'cancelado', 'finalizado'
-        self.__padre = None  #  Si pertenece a un grupo, ese grupo será el padre de esta tarea
-        self.__progreso = 0.0  #  Progreso de la tarea
+class Bloque(Elemento):
+    """Elemento que define un bloque de avance en un proyecto. Puede ser una tarea, un grupo de tareas, o el proyecto
+    completo."""
+
+    def __init__(self, nombre, inicio, fin, precedentes=[], subtipo=None, padre=0):
+        super(Bloque, self).__init__(nombre, 'bloque')
+        self.__inicio = Hito_tmpo('inicia:'+nombre, inicio, self.id) 
+        self.__fin = Hito_tmpo('fin:'+nombre, fin, self.id)  
+        self.__precedentes = precedentes 
+        self.__estado = 'esperando'  #  Los estados posibles son: 'esperando', 'demorado', 'ejecutando', 'pausado', 'cancelado', 'finalizado'
+        self.__padre = 0  
+        self.__progreso = 0.0  # Progreso del bloque
+        self.__subtipo = subtipo  # Subtipo de bloque. Puede ser grupo, tarea o proyecto
+
 
 
     @property
     def inicio(self):
-        """Hito de inicio de la tarea. Solo lectura."""
+        """Hito de inicio del bloque. Solo lectura."""
         return self.__inicio
 
     @property
     def fin(self):
-        """Hito de fin de la tarea. Solo lectura."""
-        return self.__fin
+        """Hito de fin del bloque. Solo lectura."""
+        return self.__fin    
     
     @property
     def duracion(self):
-        '''Duracion de la tarea. Solo lectura'''
+        '''Duracion del bloque. Solo lectura'''
         return self.__fin.valor - self.__inicio.valor
     
     @property
     def precedentes(self):
-        """Hitos que cuyo estado de ocurrencia debe ser True para que la tarea comience. Solo lectura."""
+        """Hitos cuyos estados de ocurrencia deben ser True para que el bloque comience. Si no hay precedentes, entonces 
+        comienza en el valor establecido en inicio. Solo lectura."""
         return self.__precedentes
 
     @property
@@ -204,98 +238,81 @@ class Tarea(Elemento):
         """
         return self.__estado
     
-    @property
-    def grupo_padre(self):
-        """Grupo al que pertenece la tarea en el caso que así fuera. Si no tiene grupo asignado el valor es None. 
-        Solo lectura."""
-        return self.__padre
+    # @property
+    # def grupo_padre(self):
+    #     """Grupo al que pertenece la tarea en el caso que así fuera. Si no tiene grupo asignado el valor es None. 
+    #     Solo lectura."""
+    #     return self.__padre
     
     @property
     def progreso(self):
-        '''Porcentaje con el progreso actual de la tarea'''
+        '''Porcentaje con el progreso actual de la tarea. Solo lectura.'''
         return self.__progreso
     
-    
-    @progreso.setter
-    def progreso(self, val):
-        self.__progreso = val
+
+    @property
+    def tipo_bloque(self):
+        return self._tipo_bloque
     
         
 
-class Grupo(Elementos):
-    """Elemento para agrupar distintas tareas o grupos de tareas"""
-    def __init__(self, nombre, hijos=[]):
-        super(Grupo, self).__init__(nombre, 'grupo')
-        
-        #self.__padre = None  --> Esta definido en la clase madre Elemento
+class Grupo(Bloque):
+    """Elemento para agrupar distintos hitos, tareas u otros grupos."""
+    def __init__(self, nombre, hijos=[], precedentes=[], padre=0):
+
+        # Busco el menor y mayor momento entre los hijos del grupo
+        inicio = 0
+        fin = 1  #  El bloque tiene como minimo una duracion de 1
+
+        if len(hijos)==0 :  # Verifico que tenga hijos
+            raise Error_de_grupo(nombre)
+
+        else:
+            for h in hijos:
+                if h.tipo == 'hito':  #  Si es un hito contiene el atributo momento, que es un int
+                    if h.momento < inicio:
+                        inicio = h.momento
+                    elif h.momento > fin:
+                        fin = h.momento
+                elif h.tipo == 'bloque':  #  Si es un bloque contiene el atributo inicio, que es de tipo hito
+                    if h.inicio.momento < inicio:
+                        inicio = h.inicio.momento
+                    if h.fin.momento > fin:
+                        fin = h.fin.momento
+                else:
+                    raise Error_de_momento(h)
+
+        super(Grupo, self).__init__(nombre, inicio, fin, precedentes, 'grupo', padre)
+
         self.__hijos = hijos
 
     def agregar_hijo(self, hijo):
-        """Agrega una tarea o grupo al grupo actual"""
-        if not hasattr(hijo, grupo_padre):
-            raise Error_de_agregado(hijo)
+        """Agrega un hito, tarea o grupo al grupo actual"""
+
+        if hijo.tipo == 'hito':  #  Si es un hito contiene el atributo momento, que es un int
+            momento_ini = hijo.momento
+            momento_fin = hijo.momento
+        elif hijo.tipo == 'bloque':  #  Si es un bloque contiene el atributo inicio, que es de tipo hito
+            momento_ini = hijo.inicio.momento
+            momento_fin = hijo.fin.momento
+        
+
+
+        if momento_ini < self.inicio.momento:
+            self._Bloque__inicio = Hito_tmpo('inicia:'+self.nombre, momento_ini, self.id) 
+
+        if momento_fin > self.fin.momento:
+            self._Bloque__fin = Hito_tmpo('fin:'+self.nombre, momento_fin, self.id) 
 
         self.__hijos.append(hijo)
-        if hijo.tipo_elem == 'tarea':
-            hijo._Tarea__padre = self
-        elif hijo.tipo_elem == 'grupo':
-            hijo._Grupo__padre = self
+        hijo._Elemento__padre = self.id
 
 
     @property
     def hijos(self):
         """Devuelve una tupla con los integrantes del grupo. Solo lectura."""
         return tuple(self.__hijos)
-
-    @property
-    def grupo_padre(self):
-        """Grupo al que pertenece el grupo en el caso que así fuera. Si no tiene grupo asignado el valor es None. 
-        Solo lectura."""
-        return self.padre  # Obtiene el valor de Elemento
     
-
-    @property
-    def inicio(self):
-        """Busca en los hitos de sus hijos el momento mas bajo y devuelve un hito de tiempo con ese valor.
-        Si hay hitos de progreso que aun no han ocurrido se los ignora. Solo lectura."""
-
-        menor = 0  #  Menor momento encontrado
-
-        for h in self.__hijos:
-            mh = h.inicio.momento
-            if not mh == None:
-                if mh < menor:
-                    menor = mh
-
-        hito_inicio = Hito('inicia:'+self.nombre, menor)
-
-        
-        return self.hito_inicio
-    
-
-    @property
-    def fin(self):
-        """Busca en los hitos de sus hijos el momento mas alto y devuelve un hito de tiempo con ese valor.
-        Si hay hitos de progreso que aun no han ocurrido se los ignora. Solo lectura."""
-
-        mayor = 0  #  Mayor momento encontrado
-
-        for h in self.__hijos:
-            mh = h.inicio.momento
-            if not mh == None:
-                if mh > mayor:
-                    mayor = mh
-
-        hito_fin = Hito('fin:'+self.nombre, mayor)
-
-        
-        return self.hito_fin
-    
-
-    @property
-    def duracion(self):
-        """Devuelve la duracion del grupo. Solo lectura."""
-        return self.fin.momento - self.inicio.momento
 
     @property
     def progreso(self):
@@ -305,8 +322,9 @@ class Grupo(Elementos):
         valor_actual = 0.0
 
         for h in self.__hijos:
-            valor_total =+ 100
-            valor_actual =+ h.progreso
+            if h.tipo == 'bloque':
+                valor_total =+ 100
+                valor_actual =+ h.progreso
 
         porcentaje = (valor_actual/valor_total)*100
 
@@ -314,7 +332,36 @@ class Grupo(Elementos):
         return porcentaje
         
     
+class Tarea(Bloque):
+    """Elemento que define un proceso a realizar en un proyecto."""
+    def __init__(self, nombre, inicio, fin, precedentes=[], padre=0):
+        super(Tarea, self).__init__(nombre, inicio, fin, precedentes, 'tarea', padre)
 
+    @property
+    def progreso(self):
+        '''Porcentaje realizado de la tarea'''
+        return self._Bloque__progreso
+    
+    
+    @progreso.setter
+    def progreso(self, val):
+        self._Bloque__progreso = val
+    
+        
+class Proyecto(Bloque):
+    """Clase que engloba todo el contenido del proyecto."""
 
+    def __init__(self, nombre):
+        super(Proyecto, self).__init__(nombre, 0, None, [], 'proyecto', None)
+
+        del precedentes # El proyecto no tiene preecdentes. Siempre puede inicializarse
+        del padre  # El proyecto es padre de todos los elementos. No tiene ningun objeto de mayor jerarquia
+
+        self._Bloque__id = 0  # El proyecto siempre tiene el id = 0
+        Elemento.__elems[0] = self
+
+        self.base_tmpo = 0
+        self.unidad = 'Intervalos'
+        self.tmpo_transcurrido = 0
     
     
