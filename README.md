@@ -1,7 +1,7 @@
 # DIAGantt
 Sistema de gestión de diagramas de Gantt  
 
-by (Martincholp)[martincholp@hotmail.com]
+by [Martincholp](martincholp@hotmail.com)
 
 * * *
 
