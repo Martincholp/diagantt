@@ -32,10 +32,10 @@ class Elemento(object):
 
     def __init__(self, nombre, tipo):
         
-        self.__nombre = nombre
-        self.__id = Elemento.get_id()  # Identificador del elemento
-        self.__tipo_elem = tipo  # Tipo de elemento ('hito', 'tarea', 'grupo', 'proyecto')
-        self.__padre = None
+        self.__nombre = nombre  # String. Nombre asigando al elemento
+        self.__id = Elemento.get_id()  # Integer. Identificador del elemento
+        self.__tipo_elem = tipo  # String. Tipo de elemento ('hito', 'tarea', 'grupo', 'proyecto')
+        self.__padre = None  # Elemento. Padre del elemento 
 
         # Agrego el objeto creado al diccionario de elementos, con el id como clave
         Elemento.__elems[self.id] = self
@@ -57,7 +57,7 @@ class Elemento(object):
 
     @property
     def tipo_elem(self):
-        '''Tipo de elemento (hito, tarea, grupo). Solo lectura.'''
+        '''Tipo de elemento (hito, tarea, grupo, proyecto). Solo lectura.'''
         return self.__tipo_elem
     
     @property
@@ -72,13 +72,13 @@ class Hito(Elemento):
     se crea un hito de tiempo por defecto."""
     
 
-    def __init__(self, nombre, valor, subtipo, id_padre=0):  #  Los valores para el tipo pueden ser 'tiempo' o 'progreso'
+    def __init__(self, nombre, valor, tipo, id_padre=0):  #  Los valores para el tipo pueden ser 'tiempo' o 'progreso'
         super(Hito, self).__init__(nombre, 'hito')
         
         self.__ocurrido = False
         self.__valor = valor
-        self.__subtipo = subtipo
-        self._Hito__padre = padre
+        self.__tipo = tipo
+        self.__id__padre = id_padre
         self.__momento = None
 
     @property
@@ -96,7 +96,7 @@ class Hito(Elemento):
 
     
     @property
-    def subtipo(self):
+    def tipo(self):
         """Establece un tipo de hito. En las clases derivadas Hito_tmpo e Hito_prog ésta propiedad adquiere los valores
         'tiempo' y 'progreso' respectivamente. Se puede establecer un nuevo tipo de hito si se extiende la clase Hito y
         se asigna el tipo en ésta propiedad"""
@@ -106,7 +106,7 @@ class Hito(Elemento):
         # tiempo global del proyecto sea mayor que el establecido como valor del hito. En caso de que sea de progreso
         # se debe establecer una tarea o grupo y su estado de ocurrencia será True cuando el progreso de dicha tarea
         # o grupo sea mayor al establecido como valor del hito. Solo lectura."""
-        return self.__subtipo
+        return self.__tipo
     
 
     @property
@@ -192,15 +192,15 @@ class Bloque(Elemento):
     """Elemento que define un bloque de avance en un proyecto. Puede ser una tarea, un grupo de tareas, o el proyecto
     completo."""
 
-    def __init__(self, nombre, inicio, fin, precedentes=[], subtipo=None, padre=0):
+    def __init__(self, nombre, inicio, fin, precedentes=[], tipo=None, padre=0):
         super(Bloque, self).__init__(nombre, 'bloque')
-        self.__inicio = Hito_tmpo('inicia:'+nombre, inicio, self.id) 
+        self.__inicio = Hito_tmpo('inicia:'+ nombre, inicio, self.id) 
         self.__fin = Hito_tmpo('fin:'+nombre, fin, self.id)  
         self.__precedentes = precedentes 
         self.__estado = 'esperando'  #  Los estados posibles son: 'esperando', 'demorado', 'ejecutando', 'pausado', 'cancelado', 'finalizado'
         self.__padre = 0  
         self.__progreso = 0.0  # Progreso del bloque
-        self.__subtipo = subtipo  # Subtipo de bloque. Puede ser grupo, tarea o proyecto
+        self.__tipo = tipo  # tipo de bloque. Puede ser grupo, tarea o proyecto
 
 
 
@@ -354,7 +354,7 @@ class Proyecto(Bloque):
     def __init__(self, nombre):
         super(Proyecto, self).__init__(nombre, 0, None, [], 'proyecto', None)
 
-        del precedentes # El proyecto no tiene preecdentes. Siempre puede inicializarse
+        del precedentes # El proyecto no tiene precedentes. Siempre puede inicializarse
         del padre  # El proyecto es padre de todos los elementos. No tiene ningun objeto de mayor jerarquia
 
         self._Bloque__id = 0  # El proyecto siempre tiene el id = 0
