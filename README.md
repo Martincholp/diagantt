@@ -37,42 +37,42 @@ Gestor de diagramas de Gantt
 
 ## Estructura de clases ##
 
-    clase Elemento(Object)
-        propiedades:
-            + nombre *(str)*
-            + id     *(int)*
-            + tipo   *(str)('Hito'|'Tarea'|'Grupo'|'Diagrama')*
-            + padre  *(int)*
-        metodos:
-            + init(nombre(str), tipo(str))
-            + get_id() *(int)*
+clase Elemento(Object)
+    * propiedades:
+        + nombre *(str)*
+        + id     *(int)*
+        + tipo   *(str)('Hito'|'Tarea'|'Grupo'|'Diagrama')*
+        + padre  *(int)*
+    * metodos:
+        + init(nombre(str), tipo(str))
+        + get_id() *(int)*
 
-        clase Hito(Elemento)
-            propiedades:
-                + ocurrido     *(bool)*
-                + t_plan       *(int)*
-                + t_ocur       *(int)*
-                + t_desv       *(int)*
-                + progreso     *(int)*
-                + precedentes  *(list(Hito))*
-                + list_trigger *(list(func))*
-            metodos:
-                + init(nombre(str), padre(int), progreso(int), t_plan(int))
-                + add_trigger(accion(func))   *(bool)*
-                + rem_trigger(int)            *(bool)*
-                + get_trigger()               *(int)*
-                + lanzar()
-                + restablecer()
+clase Hito(Elemento)
+    * propiedades:
+        + ocurrido     *(bool)*
+        + t_plan       *(int)*
+        + t_ocur       *(int)*
+        + t_desv       *(int)*
+        + progreso     *(int)*
+        + precedentes  *(list(Hito))*
+        + list_trigger *(list(func))*
+    * metodos:
+        + init(nombre(str), padre(int), progreso(int), t_plan(int))
+        + add_trigger(accion(func))   *(bool)*
+        + rem_trigger(int)            *(bool)*
+        + get_trigger()               *(int)*
+        + lanzar()
+        + restablecer()
 
-        clase Tarea(Elemento)
-            propiedades:
-                + inicio         *(Hito)*
-                + fin            *(Hito)*
-                + progreso       *(int)*
-                + duracion_plan  *(int)*
-                + duracion_ocur  *(int)*
-                + estado         *(string)('esperando'|'demorado'|'ejecutando'|'pausado'|'cancelado'|'finalizado')*
-                + list_hitos     *(list(Hito))*
-            metodos:
-                + init(nombre(str), inicio(Hito), fin(Hito), padre(int))
-                + 
+clase Tarea(Elemento)
+    * propiedades:
+        + inicio         *(Hito)*
+        + fin            *(Hito)*
+        + progreso       *(int)*
+        + duracion_plan  *(int)*
+        + duracion_ocur  *(int)*
+        + estado         *(string)('esperando'|'demorado'|'ejecutando'|'pausado'|'cancelado'|'finalizado')*
+        + list_hitos     *(list(Hito))*
+    * metodos:
+        + init(nombre(str), inicio(Hito), fin(Hito), padre(int))
+        + 
