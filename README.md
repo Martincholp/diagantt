@@ -1,5 +1,7 @@
-# diagantt
-Gestor de diagramas de Gantt
+# DIAGantt
+Sistema de gestión de diagramas de Gantt  
+
+by (Martincholp)[martincholp@hotmail.com]
 
 * * *
 
