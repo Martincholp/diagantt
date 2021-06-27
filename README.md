@@ -50,23 +50,23 @@ clase Elemento(Object)
 * propiedades:
     + nombre **(str)**
     + id     **(int)** *(solo lectura)*
-    + tipo   **(str)('Hito'|'Tarea'|'Grupo'|'Diagrama')** *(solo lectura)*
+    + tipo   **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura)*
     + padre  **(int)**
 * metodos:
-    + init(nombre(str), tipo(str))
-    + get_id() **(int)**
+    + init(nombre(str), padre(int), tipo(str))
 
 clase Hito(Elemento)
 * propiedades:
-    + ocurrido     **(bool)** *(solo lectura)*
-    + t_plan       **(int)**
-    + t_ocur       **(int)** *(solo lectura)*
-    + t_desv       **(int)** *(solo lectura)*
-    + progreso     **(int)**
-    + precedentes  **(list(Hito))** *(solo lectura)*
-    + triggers     **(list(func))** *(solo lectura)*
+    + ocurrido              **(bool)** *(solo lectura)*
+    + t_plan                **(int)**
+    + t_ocur                **(int)** *(solo lectura)*
+    + t_desv                **(int)** *(solo lectura)*
+    + progreso              **(int)**
+    + precedentes           **(dict(id:Hito))** *(solo lectura)*
+    + triggers_lanzar       **(list(func))** *(solo lectura)*
+    + triggers_restablecer  **(list(func))** *(solo lectura)*
 * metodos:
-    + init(nombre(str), padre(int), progreso(int), t_plan(int))
+    + init(nombre(str), t_plan(int), progreso(int), padre(int))
     + add_trigger(accion(func))          **(bool)**
     + rem_trigger(index(int))            **(bool)**
     + get_trigger(index(int))            **(func)**
@@ -74,7 +74,8 @@ clase Hito(Elemento)
     + rem_precedente(index(int))         **(bool)**
     + get_precedente(index(int))         **(Hito)**
     + lanzar()
-    + restablecer()                      **(bool)**
+    + resetear()
+    + actualizar()                      **(bool)**
 
 clase Tarea(Elemento)
 * propiedades:
@@ -84,7 +85,7 @@ clase Tarea(Elemento)
     + duracion_plan  **(int)** *(solo lectura)*
     + duracion_ocur  **(int)** *(solo lectura)*
     + estado         **(string)('esperando'|'demorado'|'ejecutando'|'pausado'|'cancelado'|'finalizado')**
-    + hitos          **(list(Hito))** *(solo lectura)*
+    + hitos          **(dict(id:Hito))** *(solo lectura)*
 * metodos:
     + init(nombre(str), inicio(Hito), fin(Hito), padre(int))
     + add_hito(hito(Hito))   **(bool)**
@@ -98,7 +99,7 @@ clase Grupo(Elemento)
     + duracion_plan  **(int)** *(solo lectura)*
     + duracion_ocur  **(int)** *(solo lectura)*
     + progreso       **(int)** *(solo lectura)*
-    + hijos          **(list(Hito|Tarea|Grupo))**  *(solo lectura)*
+    + hijos          **(dict(id:Hito|Tarea|Grupo))**  *(solo lectura)*
 * metodos:
     + init(nombre(str), padre(int))
     + add_hijo(hijo(Hito|Tarea|Grupo))   **(Hito|Tarea|Grupo)**
@@ -107,12 +108,14 @@ clase Grupo(Elemento)
 
 clase Diagrama(Grupo)
 * propiedades:
+
 * metodos:
     + init(nombre(str))
 
 clase Proyecto(Object)
 * propiedades:
-    + diagramas             **(list(Diagrama))** *(solo lectura)*
+    + diagramas             **(dict(id:Diagrama))** *(solo lectura)*
+    + elementos             **(dict(id:Diagrama))** *(solo lectura)*
     + tiempo_transcurrido   **(int)**
     + tiempo_unidad         **(str)**
 * metodos:
@@ -124,3 +127,4 @@ clase Proyecto(Object)
     + rem_diagrama(index(int))           **(bool)**
     + get_diagrama(index(int))           **(Diagrama)**
     + create_id()                        **(int)**
+    + set_tiempo(valor(int))
