@@ -1,7 +1,9 @@
 # DIAGantt
 Sistema de gestión de diagramas de Gantt  
 
-by [Martincholp](mailto:martincholp@hotmail.com)
+by [Martincholp](mailto:martincholp@hotmail.com)  
+
+El diagrama de Gantt es una herramienta gráfica cuyo objetivo es exponer el tiempo de dedicación previsto para diferentes tareas o actividades a lo largo de un tiempo total determinado.
 
 * * *
 
