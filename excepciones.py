@@ -25,6 +25,7 @@ class Nombre_no_valido(Exception):
     def __str__(self):
         return self.mensaje
 
+
 class Nombre_repetido(Exception):
     """Se lanza al utilizar un nombre que ya existe"""
 
@@ -90,5 +91,14 @@ class Error_de_momento(Exception):
         return self.mensaje
 
 
+class Elemento_huerfano(Exception):
+    """Error para elemento huerfano"""
+
+    def __init__(self, elem):
+        self.elem = elem
+        self.mensaje = "El elemento " + self.elem.nombre + " no tiene un padre asociado"
+
+    def __str__(self):
+        return self.mensaje
 
 

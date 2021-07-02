@@ -47,6 +47,8 @@ class Proyecto(object):
         ''' Tiempo transcurrido desde el comienzo del proyecto, medido en la unidad indicada en Unidad_de_tiempo. Solo lectura '''
         return self.__tiempo_transcurrido
 
+    ###################################   METODOS   ################################
+
     def lista_diagramas(self):
         ''' Devuelve una tupla con los diagramas del proyecto. '''
 
@@ -207,17 +209,19 @@ class Elemento(object):
 class Hito(Elemento):
     """Hito de un proyecto. Representa instantes de tiempo en un proyecto o tarea. """
 
-    def __init__(self, nombre, t_plan, progreso=0, padre=None):  #  Los valores para el tipo pueden ser 'tiempo' o 'progreso'
+    def __init__(self, nombre, t_plan, progreso=0, padre=None):
         super(Hito, self).__init__(nombre, padre, 'hito')
 
-        self.__ocurrido = False
-        self.__t_plan = t_plan
-        self.__t_ocur = None
-        # self.__t_desv = None    LO HAGO CON PROPERTY
-        self.__progreso = progreso
-        self.__precedentes = {}
-        self.__triggers_lanzar = []
-        self.__triggers_restablecer = []
+        self.__ocurrido = False            #  Estado del hito
+        self.__t_plan = t_plan             #  Tiempo planificado
+        self.__t_ocur = None               #  Tiempo en que ocurrio. Si aun no ocurrio vale None
+        # self.__t_desv = None             #  Desviacion entre el tiempoocurrido y el planificado. (lo hago directamente en una propiedad)
+        self.__progreso = progreso         #  Valor de progreso que debe tener el padre para que el hito ocurra
+        self.__precedentes = {}            #  Diccionario con los precedentes
+        self.__triggers_ocurrido = []      #  Lista de funciones a ejecutar cuando ocurra el hito (ya sea manualmente o porque se cumple)
+        self.__triggers_no_ocurrido = []   #  Lista de funciones a ejecutar si se establece manualmente como falso la ocurrencia
+
+    ######################   PROPIEDADES   ################################
 
     @property
     def ocurrido(self):
@@ -226,7 +230,7 @@ class Hito(Elemento):
 
     @property
     def progreso(self):
-        """ Progreso que debe tener el padre para que el hito para que ocurra. Solo lectura"""
+        """ Progreso que debe tener el padre para que el hito ocurra. Solo lectura"""
         return self.__progreso
 
     @property
@@ -247,53 +251,85 @@ class Hito(Elemento):
         else:
             return None
 
+    ######################   METODOS   ################################
+
     def actualizar(self):
         ''' Verifica la ocurrencia del hito según el tiempo planificado y el progreso, y cambia su estado de ocurrencia ejecutando los trigger correspondientes '''
-        pass
 
-    def add_trigger_lanzar(self, accion):
-        """  """
-        pass
+        if not self.ocurrido:                                   #  Si el hito no ocurrio hago las verificaciones
 
-    def rem_trigger_lanzar(self, index):
-        """  """
-        pass
+            padre = self.padre                                  #  Verifico cual es el elemento padre
+            if padre == None:                                   #  y si no tiene (es un hito huerfano)
+                raise Elemento_huerfano(self)                   #  lanzo una excepcion
 
-    def get_trigger_lanzar(self, index):
-        """  """
-        pass
+            aux_ocurrir = False                                 #  Auxiliar para saber si debe ocurrir o no. Por defecto no debe ocurrir
 
-    def add_trigger_restablecer(self, accion):
-        """  """
-        pass
+            if self.padre.progreso >= self.progreso:            #  Si el progreso del padre es mayor o igual que el del hito
+                aux_ocurrir = True                              #  establezco la variable aux_ocurrir a True y
+                for prec in self.__precedentes.itervalues():    #  verifico los precedentes.
+                    if not prec.ocurrido:                       #  Si algun precedente no ocurrio
+                        aux_ocurrir = False                     #  establezco la aux_ocurrir a Falso
+                        break                                   #  y salgo del bucle
+                                                                #  Si todos los precedentes ocurrieron, aux_ocurrir seguira siendo True
 
-    def rem_trigger_restablecer(self, index):
-        """  """
-        pass
+            if aux_ocurrir:                                     #  Si debe ocurrir
+                self.set_ocurrido(True)                         #  seteo su estado a verdadero
 
-    def get_trigger_restablecer(self, index):
-        """  """
-        pass
+        return self.ocurrido                                    #  Devuelvo el estado final en que quedo el hito
+
+    def set_ocurrido(self, estado):
+        """ Establece el estado del hito sin verificar el progreso ni los precedentes, y ejecuta los triggers asociados. """
+
+        if estado:                                  #  Si el hito ha ocurrido
+            self.__ocurrido = True                  #  establezco a True la variable interna
+            for t in self.__triggers_ocurrido:      #  y a cada trigger de la lista de ocurrido
+                t()                                 #  lo ejecuto.
+        else:                                       #  Si el hito no ha ocurrido
+            self.__ocurrido = False                 #  establezco a False la variable interna
+            for t in self.__triggers_no_ocurrido:   #  y a cada trigger de la lista de no ocurrido
+                t()                                 #  lo ejecuto
+
+        return self.ocurrido                        #  Devuelvo el estado final del hito
+
+    def add_trigger_ocur(self, trigger):
+        """ Agrega un trigger que se ejecutara cuando se establezca el hito a True """
+        self.__triggers_ocurrido.append(trigger)
+
+    def rem_trigger_ocur(self, trigger):
+        """ Quita el trigger indicado de la lista de triggers para el hito ocurrido """
+        self.__triggers_ocurrido.remove(trigger)
+
+    def lista_trigger_ocur(self):
+        """ Devuelve una tupla con los trigger para el hito ocurrido """
+        return tuple(self.__triggers_ocurrido)
+
+    def add_trigger_no_ocur(self, trigger):
+        """ Agrega un trigger que se ejecutara cuando se establezca el hito a False """
+        self.__triggers_no_ocurrido.append(trigger)
+
+    def rem_trigger_no_ocur(self, trigger):
+        """ Quita el trigger indicado de la lista de triggers para el hito no_ocurrido """
+        self.__triggers_no_ocurrido.remove(trigger)
+
+    def lista_trigger_no_ocur(self):
+        """ Devuelve una tupla con los trigger para el hito no_ocurrido """
+        return tuple(self.__triggers_no_ocurrido)
 
     def add_precedente(self, precedente):
-        """  """
-        pass
+        """ Agrega un precedente a la lista de precedentes """
+        self.__precedentes[precedente.id] = precedente
 
     def rem_precedente(self, id):
-        """  """
-        pass
+        """ Quita de la lista de precedentes el hito con el id indicado """
+        return self.__precedentes.pop(id)
 
     def get_precedente(self, id):
-        """  """
-        pass
+        """ Obtiene el hito precedente con el id indicado """
+        return self.__precedentes[id]
 
-    def lanzar(self):
-        """ Establece el hito como ocurrido sin verificar el progreso ni los precedentes, y ejecuta los triggers_lanzar asociados. """
-        pass
-
-    def resetear(self):
-        """ Establece el hito como no ocurrido sin verificar el progreso ni los precedentes, y ejecuta los triggers_restablecer asociados. """
-        pass
+    def lista_precedentes(self):
+        """ Devuelve una tupla con los precedentes """
+        return tuple(self.__precedentes.values())
 
 
 class Tarea(Elemento):
@@ -335,7 +371,7 @@ class Grupo(Elemento):
 
         self.__hijos = {}
 
-    # COSAS PARA HACER.
+    ############################   PROPIEDADES   ##########################
 
         # Buscar el menor inicio y el mayor fin entre los hijos
         #   self.__inicio = None
@@ -348,6 +384,8 @@ class Grupo(Elemento):
         # Calcular el progreso segun el de los hijos. Debe ser property de solo lectura
         #   self.__progreso = None
 
+    ############################   METODOS   ##########################
+
     def add_hijo(self, hijo):
         """ Agrega un hijo al contenedor (hito, tarea, u otro grupo)"""
         pass
@@ -358,6 +396,10 @@ class Grupo(Elemento):
 
     def get_hijo(self, id):
         """ Retorna el hijo con el id indicado """
+        pass
+
+    def lista_hijos(self):
+        """ Devuelve una tupla con todos los hijos del grupo """
         pass
 
 
