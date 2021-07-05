@@ -48,12 +48,15 @@ Es el mayor de los elementos en la jerarquía del documento, y agrupa a todos lo
 
 clase Elemento(Object)
 * propiedades:
-    + nombre **(str)**
-    + id     **(int)** *(solo lectura)*
-    + tipo   **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura)*
-    + padre  **(int)** *(solo lectura)*
+    + nombre  **(str)**
+    + id      **(int)** *(solo lectura)*
+    + tipo    **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura)*
+    + padre   **(int)** *(solo lectura)*
+    + estado  **(int)('esperando = 0'|'demorado = 1'|'ejecutando = 2'|'pausado = 3'|'cancelado = 4'|'finalizado = 5')** *(solo lectura)*
 * metodos:
-    + init(nombre(str), padre(int), tipo(str))
+    + \_\_init\_\_(nombre(str), padre(int), tipo(str))
+    + t_transcurrido()   **(int)**
+    + set_estado(int)    
 
 clase Hito(Elemento)
 * propiedades:
@@ -69,7 +72,7 @@ clase Hito(Elemento)
     + tipo                  **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura) (Elemento)*
     + padre                 **(int)** *(solo lectura) (Elemento)*
 * metodos:
-    + init(nombre(str), t_plan(int), progreso(int), padre(int))
+    + \_\_init\_\_(nombre(str), t_plan(int), progreso(int), padre(Elemento))
     + actualizar()                        **(bool)**
     + set_ocurrido(estado(bool))          **(bool)**
     + add_precedente(precedente(hito))        
@@ -90,13 +93,23 @@ clase Tarea(Elemento)
     + progreso       **(int)**
     + duracion_plan  **(int)** *(solo lectura)*
     + duracion_ocur  **(int)** *(solo lectura)*
-    + estado         **(string)('esperando'|'demorado'|'ejecutando'|'pausado'|'cancelado'|'finalizado')**
-    + hitos          **(dict(id:Hito))** *(solo lectura)*
+* propiedades heredadas:
+    + nombre         **(str)** *(Elemento)*
+    + id             **(int)** *(solo lectura) (Elemento)*
+    + tipo           **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura) (Elemento)*
+    + padre          **(int)** *(solo lectura) (Elemento)*
+    + estado         **(int)('esperando = 0'|'demorado = 1'|'ejecutando = 2'|'pausado = 3'|'cancelado = 4'|'finalizado = 5')** *(solo lectura)* *(Elemento)*
 * metodos:
-    + init(nombre(str), inicio(Hito), fin(Hito), padre(int))
-    + add_hito(hito(Hito))   **(bool)**
-    + rem_hito(index(int))   **(bool)**
+    + \_\_init\_\_(nombre(str), inicio(int), duracion(int), padre(Elemento))
+    + crear_hito(nombre(str), t_plan(int), progreso(int))
+    + add_hito(hito(Hito))   
+    + rem_hito(index(int))   **(Hito)**
     + get_hito(index(int))   **(Hito)**
+    + lista_hitos()          **(tuple(Hito))**    
+* metodos heredados:
+    + t_transcurrido()   **(int)** *(Elemento)*
+    + set_estado(int)    *(Elemento)*
+
 
 clase Grupo(Elemento)
 * propiedades:
@@ -106,7 +119,7 @@ clase Grupo(Elemento)
     + duracion_ocur  **(int)** *(solo lectura)*
     + progreso       **(int)** *(solo lectura)*
 * metodos:
-    + init(nombre(str), padre(int))
+    + \_\_init\_\_(nombre(str), padre(Elemento))
     + add_hijo(hijo(Hito|Tarea|Grupo))   **(Hito|Tarea|Grupo)**
     + rem_hijo(index(int))               **(bool)**
     + get_hijo(index(int))               **(Hito|Tarea|Grupo)**
@@ -125,7 +138,7 @@ clase Diagrama(Grupo)
     + id             **(int)** *(solo lectura) (Elemento)*
     + tipo           **(str)('hito'|'tarea'|'grupo'|'diagrama')** *(solo lectura) (Elemento)*
 * metodos:
-    + init(nombre(str), proyecto(Proyecto))
+    + \_\_init\_\_(nombre(str), proyecto(Proyecto))
     + set_proyecto(proyecto(Proyecto|None))
 * metodos heredados:
     + add_hijo(hijo(Hito|Tarea|Grupo))   **(Hito|Tarea|Grupo)** *(Grupo)*
@@ -137,16 +150,16 @@ clase Proyecto(Object)
 * propiedades:
     + nombre                **(str)**
     + unidad_de_tiempo      **(str)**
-    + tiempo_transcurrido   **(int)**
+    + tiempo_global         **(int)**
 * metodos:
-    + init()
+    + \_\_init\_\_()
     + lista_diagramas()                              **(tuple(Diagrama))**
     + add_diagrama(diagrama(Diagrama), nombre(str))  **(Diagrama)**
     + rem_diagrama(diagrama(Diagrama))               **(Diagrama)**
     + buscar_diagrama_por_nombre(nombre(str))        **(Diagrama|None)**
     + buscar_diagrama_por_id(diag_id(int))           **(Diagrama|None)**
-    + create_diagrama(nombre(str))                   **(Diagrama)**
-    + create_id()                                    **(int)** *(metodo de clase)*
+    + crear_diagrama(nombre(str))                    **(Diagrama)**
+    + crear_id()                                     **(int)** *(metodo de clase)*
     + get_elem(id_elem(int))                         **(Diagrama|Grupo|Tarea|Hito|None)**
     + set_tiempo(valor(int))
     + cargar(url(str))
