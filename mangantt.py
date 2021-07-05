@@ -7,6 +7,43 @@ from excepciones import *
 '''Estructura de clases del sistema de gestion de diagramas de Gantt'''
 
 
+#####   CONSTANTES UTILIZADAS EN EL MODULO   ############
+
+##   ESTADO DE EJECUCION DE UNA TAREA, GRUPO, DIAGRAMA O PROYECTO   ###
+
+Estado_indeterminado = 0
+Estado_esperando     = 1
+Estado_demorado      = 2
+Estado_ejecutando    = 3
+Estado_pausado       = 4
+Estado_cancelado     = 5
+Estado_finalizado    = 6
+
+
+def estados_string(estado):
+    ''' Devuelve un string indicando el estado de ejecucion de una tarea, grupo, diagrama o proyecto que representa el entero pasado '''
+
+    estados = {0:'indeterminado' ,1:'esperando', 2:'demorado', 3:'ejecutando', 4:'pausado', 5:'cancelado', 6:'finalizado'}
+
+    return estados[estado]
+
+##   TIPOS DE ELEMENTOS   ##
+
+Tipo_proyecto    = 0
+Tipo_hito        = 1
+Tipo_tarea       = 2
+Tipo_grupo       = 3
+Tipo_diagrama    = 4
+
+
+def tipos_string(tipo):
+    ''' Devuelve un string indicando el tipo de elemento que representa el entero pasado '''
+
+    tipos = {0:'proyecto', 1:'hito', 2:'tarea', 3:'grupo', 4:'diagrama'}
+
+    return tipos[tipo]
+
+
 class Proyecto(object):
     """Clase que engloba todo el contenido del proyecto."""
 
@@ -14,10 +51,11 @@ class Proyecto(object):
 
     def __init__(self):
 
+        self.__tipo = 0  #  Inidica que es un proyecto
         self.__diagramas = []  # Lista con todos los diagramas del proyecto
         self.__elementos = {}
-
-        self.__tiempo_transcurrido = 0
+        
+        self.__tiempo_global = 0
         self.__tiempo_unidad = ''
         self.__nombre = ''
         self.__ultima_url = ''
@@ -43,9 +81,18 @@ class Proyecto(object):
         self.__tiempo_unidad = unidad
 
     @property
-    def tiempo_transcurrido(self):
+    def tiempo_global(self):
         ''' Tiempo transcurrido desde el comienzo del proyecto, medido en la unidad indicada en Unidad_de_tiempo. Solo lectura '''
-        return self.__tiempo_transcurrido
+        return self.__tiempo_global
+
+    @property
+    def estado(self):
+        ''' Estado de ejecucion del proyecto. Solo lectura'''
+
+        ###  CALCULAR A PARTIR DEL ESTADO DE SUS DIAGRAMAS  ###
+        pass
+    
+   
 
     ###################################   METODOS   ################################
 
@@ -60,13 +107,13 @@ class Proyecto(object):
         """ Agrega el diagrama pasado al proyecto. Si no se pasa ningún diagrama se debe pasar un nombre para crear uno nuevo. Si tampoco hay un nombre se lanza una excepción """
 
         if diagrama == None:
-            diag_aux = self.create_diagrama(nombre, self)
+            diag_aux = self.crear_diagrama(nombre, self)
         else:
             diag_aux = diagrama
 
         # Verifico que el id del diagrama no exista (si acabo de crearlo no existe, pero si estaba en otro contexto puede generar conflicto)
         while self.__elementos.has_key(diag_aux.id):
-            diag_aux._Elemento__id = self.create_id()
+            diag_aux._Elemento__id = self.crear_id()
 
         # Agrego el diagrama a la lista de diagramas y de elementos
         self.__diagramas.append(diag_aux)
@@ -110,7 +157,7 @@ class Proyecto(object):
 
         return res
 
-    def create_diagrama(self, nombre):
+    def crear_diagrama(self, nombre):
         """ Crea y devuelve un diagrama vacío con el nombre pasado. Es un diagrama huérfano, ya que no queda asociado a ningún proyecto"""
 
         # Verifico que el nombre no exista
@@ -123,7 +170,7 @@ class Proyecto(object):
         return NewDiag
 
     @staticmethod
-    def create_id():
+    def crear_id():
         """ Crea y devuelve un identificador válido dentro del contexto del proyecto """
         id_valido = Proyecto.id_disponible
         Proyecto.id_disponible += 1
@@ -136,8 +183,14 @@ class Proyecto(object):
 
         return e
 
-    def set_tiempo(self, valor):
-        """  """
+    def set_tiempo(self, tiempo):
+        """ Establece el tiempo global del proyecto """
+        self.__tiempo_global = tiempo
+
+    def set_estado(self, val_estado):
+        ''' Establece el estado de ejecucion del proyecto '''
+
+        ######   Hacer que tambien cambien de estado sus diagramas   ######
         pass
 
     def cargar(self, url):
@@ -175,9 +228,10 @@ class Elemento(object):
             raise Nombre_no_valido(nombre)
 
         self.__nombre = nombre  # String. Nombre asigando al elemento
-        self.__tipo = tipo  # String. Tipo de elemento ('hito', 'tarea', 'grupo', 'diagrama')
+        self.__tipo = tipo  # Int. Tipo de elemento (hito = 1, tarea = 2, grupo = 3, diagrama = 4)
         self.__padre = None  # Elemento. Padre del elemento
-        self.__id = Proyecto.create_id()  # Integer. Identificador del elemento
+        self.__estado = Estado_esperando  # Integer. Estado del elemento (no valido para hitos)
+        self.__id = Proyecto.crear_id()  # Integer. Identificador del elemento
 
     #########################   PROPIEDADES   #########################
 
@@ -197,7 +251,7 @@ class Elemento(object):
 
     @property
     def tipo(self):
-        ''' Tipo de elemento (hito, tarea, grupo, diagrama). Solo lectura.'''
+        ''' Tipo de elemento (Tipo_hito, Tipo_tarea, Tipo_grupo, Tipo_diagrama). Solo lectura.'''
         return self.__tipo
 
     @property
@@ -205,12 +259,60 @@ class Elemento(object):
         """ Padre del elemento. Si el elemento no tiene padre, entonces vale None. Solo lectura. """
         return self.__padre
 
+    @property
+    def estado(self):
+        ''' Estado de ejecucion de una tarea, grupo, diagrama o proyecto'''
+        return self.__estado
+
+    def t_transcurrido(self):
+        ''' Tiempo transcurrido desde el inicio de la tarea, grupo, diagrama o proyecto. Si el elemento no inicio vale None'''
+
+        T_transc = None
+
+        if self.inicio.ocurrido:                      #  Solo puede haber tiempo transcurrido si el elemento ha iniciado
+            if self.padre.tipo == None:               #  Si el elemento es huerfano no esta asociado a ningun proyecto,
+                raise Elemento_huerfano(self)   #  por lo tanto no se puede obtener el tiempo global
+
+            T_global = self.padre._Elemento__T_global()   #  Pregunto el tiempo global al padre
+            T_transc = T_global - self.inicio.t_ocur             #  Calculo el tiempo transcurrido
+
+        return T_transc
+
+    def __T_global(self):
+        ''' Funcion que devuelve el tiempo global del proyecto '''
+
+        if self.padre.tipo == None:         #  Si el elemento es huerfano no esta asociado a ningun proyecto,
+            raise Elemento_huerfano(self)   #  por lo tanto no se puede obtener el tiempo global
+
+        if self.padre.tipo == Tipo_proyecto:        #  Si el padre del elemento actual es el proyecto
+            tg = self.padre.tiempo_global           #  obtengo el tiempo global
+        else:                                       #  De lo contrario
+            tg = self.padre._Elemento__T_global()   #  sigo preguntando recursivamente a los ancestros
+
+        return tg
+
+    def __str__(self):
+        ''' Valor que se devuelve al convertir a string el elemento '''
+        return self.nombre + '(' + tipos_string(self.tipo) + ')'
+
+    def set_estado(self, val_estado):
+        ''' Establece el estado de ejecucion de una tarea, grupo, diagrama o proyecto'''
+
+        if val_estado < 0 or val_estado > 5:  #  Verifico que sea un valor correcto para el estado
+            raise Error_de_estado(val_estado)
+
+        self.__estado = val_estado
+
 
 class Hito(Elemento):
     """Hito de un proyecto. Representa instantes de tiempo en un proyecto o tarea. """
 
     def __init__(self, nombre, t_plan, progreso=0, padre=None):
-        super(Hito, self).__init__(nombre, padre, 'hito')
+
+        if padre != None and padre.tipo == Tipo_hito:  #  El padre de un hito no puede ser otro hito
+            raise Padre_no_valido(padre)
+
+        super(Hito, self).__init__(nombre, padre, Tipo_hito)
 
         self.__ocurrido = False            #  Estado del hito
         self.__t_plan = t_plan             #  Tiempo planificado
@@ -220,6 +322,14 @@ class Hito(Elemento):
         self.__precedentes = {}            #  Diccionario con los precedentes
         self.__triggers_ocurrido = []      #  Lista de funciones a ejecutar cuando ocurra el hito (ya sea manualmente o porque se cumple)
         self.__triggers_no_ocurrido = []   #  Lista de funciones a ejecutar si se establece manualmente como falso la ocurrencia
+
+        #  Un hito es un instante de tiempo, por lo tanto no existe un valor transcurrido desde su inicio
+        del self.t_transcurrido
+
+        #  Ademas no tiene estados de ejecucion asociados
+        del self.__estado
+        del self.estado
+        del self.set_estado
 
     ######################   PROPIEDADES   ################################
 
@@ -335,41 +445,100 @@ class Hito(Elemento):
 class Tarea(Elemento):
     """ Elemento que define un proceso a realizar en un proyecto."""
 
-    def __init__(self, nombre, inicio, fin, padre=None):
-        super(Tarea, self).__init__(nombre, padre, 'tarea')
+    def __init__(self, nombre, inicio, duracion, padre=None):
 
-        self.__inicio = inicio
-        self.__fin = fin
-        self.__progreso = 0
-        self.__estado = 'esperando'  # 'esperando'|'demorado'|'ejecutando'|'pausado'|'cancelado'|'finalizado'
+        if padre != None and (padre.tipo == Tipo_hito or padre.tipo == Tipo_tarea):  #  El padre de una tarea no puede ser un hito u otra tarea
+            raise Padre_no_valido(padre)
+
+        super(Tarea, self).__init__(nombre, padre, Tipo_tarea)
+
+        self.__inicio =  Hito('Inicio', inicio, 0, self)
+        self.__duracion = duracion
+
+        #  Al establecer la duracion, hay que crear un hito para el final
+        self.__fin = Hito('Final', inicio + duracion, 100, self)
+
+        self.__progreso = 0   #  Porcentaje del progreso actual
         self.__hitos = {}  #  Lista de hitos del usuario
 
-    # COSAS PARA HACER
+        #########################   PROPIEDADES   ###########################
 
-        # Calcular la duracion planificada y la duracion ocurrida. Hacerlo en una property de solo lectura
-        #   self.__duracion_plan = None
-        #   self.__duracion_ocur = None
+    @property
+    def inicio(self):
+        ''' Hito de inicio de la tarea '''
+        return self.__inicio
+
+    @property
+    def fin(self):
+        ''' Hito del final de la tarea '''
+        return self.__fin
+
+    @property
+    def progreso(self):
+        ''' Progreso de la tarea'''
+        return self.__progreso
+
+    @progreso.setter
+    def progreso(self, prog):
+
+        if prog < 0 or prog > 100:  #  Si el progreso no está entre 0 y 100 lanzo una excepcion (debe ser expresado en porcentaje)
+            raise Error_de_progreso(prog)
+
+        self.__progreso = prog
+
+    @property
+    def duracion_plan(self):
+        ''' Duracion planificada de la tarea '''
+        return self.__duracion
+
+    @property
+    def duracion_ocur(self):
+        ''' Duracion ocurrida de la tarea. Si la tarea aun no termino vale None '''
+
+        dur = None
+
+        if self.fin.ocurrido:    # Solo se puede obtener la duracion ocurrida si el hito del final ya ha ocurrido.
+            dur = self.fin.t_ocur - self.inicio.t_ocur
+
+        return dur
+
+        #########################   METODOS   ###########################
+
+    def crear_hito(self, nombre, t_plan, progreso=0):
+        """ Crea un hito y lo agrega a la lista de hitos de usuario"""
+
+        H = Hito(nombre, t_plan, progreso, self)  #  Hito creado para agregar
+
+        add_hito(H)                         #  Agrego el hito a la lista de hitos de usuario
+
+        return H                            #  Devuelvo el hito que acabo de crear
 
     def add_hito(self, hito):
-        """ Agrega un hito a la lista de hitos de la tarea """
-        pass
+        """ Agrega un hito a la lista de hitos de usuario """
+        self.__hitos[hito.id] = hito
 
     def rem_hito(self, id):
-        """  Quita el hito indicado de la lista de hitos de la tarea  """
-        pass
+        """  Quita el hito indicado de la lista de hitos de usuario """
+        return self.__hitos.pop(id)
 
     def get_hito(self, id):
-        """  Retorna el hito indicado """
-        pass
+        """  Retorna el hito de usuario indicado """
+        return self.__hitos[id]
+
+    def lista_hitos(self):
+        """ Devuelve una tupla con los hitos de usuario de la tarea """
+        return tuple(self.__hitos.values())
 
 
 class Grupo(Elemento):
     """ Clase que define un contenedor de otros elementos, como Tareas, Hitos y otros Grupos """
 
     def __init__(self, nombre, padre=None):
-        super(Grupo, self).__init__(nombre, padre, 'grupo')
+        super(Grupo, self).__init__(nombre, padre, 3)
 
         self.__hijos = {}
+
+        del self.__estado  #  Lo calculo directamente con la propiedad estado y la funcion set_estado
 
     ############################   PROPIEDADES   ##########################
 
@@ -383,6 +552,13 @@ class Grupo(Elemento):
 
         # Calcular el progreso segun el de los hijos. Debe ser property de solo lectura
         #   self.__progreso = None
+
+    # @property
+    # def estado(self):
+    #     ''' Devuelve el estado del grupo '''
+
+    #     # Calcular el estado segun los estados de los hijos
+    #     return self.__estado
 
     ############################   METODOS   ##########################
 
@@ -402,6 +578,10 @@ class Grupo(Elemento):
         """ Devuelve una tupla con todos los hijos del grupo """
         pass
 
+    ########   Hacer que modifique todos los estados de sus hijos (grupos y tareas) tambien   #########
+    # def set_estado(self, val_estado):
+    #    pass
+
 
 class Diagrama(Grupo):
     """ Clase que define un diagrama de Gantt """
@@ -409,17 +589,21 @@ class Diagrama(Grupo):
     def __init__(self, nombre, proyecto=None):
         super(Diagrama, self).__init__(nombre, 0)
 
-        del self.padre
-        del self.__padre
         self.__proyecto = proyecto
-        self.__tipo = 'diagrama'
+        self.__tipo = 4
 
     ####################   PROPIEDADES   ####################
 
     @property
     def proyecto(self):
-        ''' Proyecto al cual pertenece el diagrama. Si proyecto=None se considera un diagrama huerfano. Solo lectura '''
+        """ Proyecto al cual pertenece el diagrama. Si proyecto=None se considera un diagrama huerfano. Es equivalente a la propiedad 'Diagrama.padre'. Solo lectura """
         return self.__proyecto
+
+    @property
+    def padre(self):
+        """ Proyecto al cual pertenece el diagrama. Si proyecto=None se considera un diagrama huerfano. Es equivalente a la propiedad 'Diagrama.proyecto'. Solo lectura """
+
+        return self.__proyecto  #  Se utiliza por compatibilidad
 
     def set_proyecto(self, proyecto):
         """ Establece a que proyecto pertenece el diagrama. Para dejarlo huerfano hacer proyecto=None """

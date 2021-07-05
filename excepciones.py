@@ -26,6 +26,17 @@ class Nombre_no_valido(Exception):
         return self.mensaje
 
 
+class Padre_no_valido(Exception):
+    """Se lanza al utilizar un padre no válido"""
+
+    def __init__(self, val=None):
+        self.val = val
+        self.mensaje = "El tipo de elemento del padre no es correcto --> " + str(self.val)
+
+    def __str__(self):
+        return self.mensaje
+
+
 class Nombre_repetido(Exception):
     """Se lanza al utilizar un nombre que ya existe"""
 
@@ -100,5 +111,17 @@ class Elemento_huerfano(Exception):
 
     def __str__(self):
         return self.mensaje
+
+
+class Error_de_estado(Exception):
+    """Error para estados no válidos"""
+
+    def __init__(self, elem):
+        self.elem = elem
+        self.mensaje = "El estado no puede tener valor " + str(elem)
+
+    def __str__(self):
+        return self.mensaje
+
 
 
