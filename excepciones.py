@@ -5,14 +5,15 @@
 
 
 ##  EXCEPCIONES  ##
-class Error_de_tipo(Exception):
+class Tipo_no_valido(Exception):
     """Se lanza al utilizar un tipo no válido"""
 
     def __init__(self, val):
         self.val = val
+        self.mensaje = "El tipo " + self.val + " no es válido"
 
     def __str__(self):
-        return "El tipo " + self.val + " no es válido"
+        return self.mensaje
 
 
 class Nombre_no_valido(Exception):
@@ -37,6 +38,28 @@ class Padre_no_valido(Exception):
         return self.mensaje
 
 
+class Tiempo_no_valido(Exception):
+    """Error para tiempos no válidos"""
+
+    def __init__(self, tiempo):
+        self.tiempo = tiempo
+        self.mensaje = "El tiempo no puede tener valor " + str(tiempo)
+
+    def __str__(self):
+        return self.mensaje
+
+
+class Progreso_no_valido(Exception):
+    """Error al ingresar un valor de progreso que no es correcto para la acción que se intenta realizar"""
+
+    def __init__(self, valor):
+        self.valor = valor
+        self.mensaje = "El valor " + str(self.valor) + " no es correcto"
+
+    def __str__(self):
+        return self.mensaje
+
+
 class Nombre_repetido(Exception):
     """Se lanza al utilizar un nombre que ya existe"""
 
@@ -56,17 +79,6 @@ class Error_de_progreso(Exception):
 
     def __str__(self):
         return "No se puede obtener el progreso del elemento " + elem.nombre
-
-
-class Progreso_no_valido(Exception):
-    """Error al ingresar un valor de progreso que no es correcto para la acción que se intenta realizar"""
-
-    def __init__(self, valor):
-        self.valor = valor
-        self.mensaje = "El valor " + str(self.valor) + " no es correcto"
-
-    def __str__(self):
-        return self.mensaje
 
 
 class Error_de_agregado(Exception):
@@ -122,6 +134,5 @@ class Error_de_estado(Exception):
 
     def __str__(self):
         return self.mensaje
-
 
 
